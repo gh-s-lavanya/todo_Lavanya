@@ -1,0 +1,31 @@
+### Get all todos
+GET http://localhost:5136/api/todo
+
+### Get a specific todo by ID
+GET http://localhost:5136/api/todo/1
+
+### Create a new todo
+POST http://localhost:5136/api/todo
+Content-Type: application/json
+
+{
+  "title": "Finish project",
+  "description": "Complete backend setup",
+  "isCompleted": false,
+  "userId": "abc1263"
+}
+
+### Update a todo
+PUT http://localhost:5136/api/todo/1
+Content-Type: application/json
+
+{
+  "id": 1,
+  "title": "Finish project updated",
+  "description": "Backend complete",
+  "isCompleted": true,
+  "userId": "abc123"
+}
+
+### Delete a todo
+DELETE http://localhost:5136/api/todo/1
