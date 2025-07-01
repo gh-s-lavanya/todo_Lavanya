@@ -5007,11 +5007,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\ADMIN\\Desktop\\new\\ROOTTODOAPI\\TodoApi\\TodoApi.csproj",
+      "projectUniqueName": "C:\\Users\\ADMIN\\Desktop\\new\\todo_Lavanya\\TodoApi\\TodoApi.csproj",
       "projectName": "TodoApi",
-      "projectPath": "C:\\Users\\ADMIN\\Desktop\\new\\ROOTTODOAPI\\TodoApi\\TodoApi.csproj",
+      "projectPath": "C:\\Users\\ADMIN\\Desktop\\new\\todo_Lavanya\\TodoApi\\TodoApi.csproj",
       "packagesPath": "C:\\Users\\ADMIN\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\ADMIN\\Desktop\\new\\ROOTTODOAPI\\TodoApi\\obj\\",
+      "outputPath": "C:\\Users\\ADMIN\\Desktop\\new\\todo_Lavanya\\TodoApi\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\ADMIN\\AppData\\Roaming\\NuGet\\NuGet.Config"
