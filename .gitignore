@@ -1,0 +1,28 @@
+# === FRONTEND: Next.js ===
+todo-frontend/.next/
+todo-frontend/node_modules/
+todo-frontend/.env
+todo-frontend/.env.local
+todo-frontend/.turbo/
+todo-frontend/out/
+todo-frontend/coverage/
+todo-frontend/.eslintcache
+
+# === BACKEND: .NET ===
+TodoApi/bin/
+TodoApi/obj/
+TodoApi/.vs/
+TodoApi/*.user
+TodoApi/*.suo
+
+# === General System / Editor Files ===
+.vscode/
+*.log
+*.tmp
+*.bak
+*.swp
+*.DS_Store
+Thumbs.db
+
+# === Environment Variables (Global) ===
+.env
