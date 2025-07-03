@@ -8,69 +8,101 @@ using TodoApi.Models;
 using TodoApi.Services.Interfaces;
 using TodoApi.Services.Implementations;
 
-var builder = WebApplication.CreateBuilder(args);
+await MainAsync(args);
 
-// 🔹 Register EF Core + Identity
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite("Data Source=app.db").LogTo(Console.WriteLine, LogLevel.Information));
-
-builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
-    .AddEntityFrameworkStores<ApplicationDbContext>()
-    .AddDefaultTokenProviders();
-
-// 🔹 Configure JWT Authentication
-builder.Services.AddAuthentication(options =>
+static async Task MainAsync(string[] args)
 {
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    options.TokenValidationParameters = new TokenValidationParameters
+    var builder = WebApplication.CreateBuilder(args);
+
+    // Register EF Core + Identity
+    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+        options.UseSqlite("Data Source=app.db").LogTo(Console.WriteLine, LogLevel.Information));
+
+    builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
+        .AddEntityFrameworkStores<ApplicationDbContext>()
+        .AddDefaultTokenProviders();
+
+    // Configure JWT Authentication
+    builder.Services.AddAuthentication(options =>
     {
-        ValidateIssuer = true,
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidAudience = builder.Configuration["Jwt:Audience"],
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],// Validate the issuer
+            ValidAudience = builder.Configuration["Jwt:Audience"],// Validate the audience
+            // Ensure the key is present in the configuration
             IssuerSigningKey = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)
-        ?? throw new InvalidOperationException("JWT key is missing from configuration."))
-        
-    };
-});
+                ?? throw new InvalidOperationException("JWT key is missing from configuration."))
+        };
+    }); 
 
-builder.Services.AddAuthorization();
-builder.Services.AddControllers();
-builder.Services.AddCors();
+    builder.Services.AddAuthorization();
+    builder.Services.AddControllers();
+    builder.Services.AddCors();// Enable CORS
 
-builder.Services.AddScoped<ITodoService, TodoService>();
-builder.Services.AddScoped<IAccountService, AccountService>();
-builder.Services.AddHttpContextAccessor();
+    // Register Custom Services
+    builder.Services.AddScoped<ITodoService, TodoService>();
+    builder.Services.AddScoped<IAccountService, AccountService>();
+    builder.Services.AddHttpContextAccessor();
 
+    var app = builder.Build();
 
+    using (var scope = app.Services.CreateScope())
+    {
+    var services = scope.ServiceProvider;
+    var userManager = services.GetRequiredService<UserManager<ApplicationUser>>(); // UserManager for Identity
+    var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>(); // RoleManager for Identity
 
-var app = builder.Build();
+    string[] roles = new[] { "Admin", "User" }; // Define roles
 
-using (var scope = app.Services.CreateScope())
-{
-    // Retrieves an instance of ApplicationDbContext from the service provider within the current scope.
-    // This allows for database operations using Entity Framework Core within the scoped lifetime.
-    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    dbContext.Database.EnsureCreated();
+    foreach (var role in roles)
+    {
+        if (!await roleManager.RoleExistsAsync(role))// Check if role exists
+            await roleManager.CreateAsync(new IdentityRole(role));// Create role if it doesn't exist
+    }
+
+    var adminEmail = "admin@gmail.com"; // Admin email
+    // Check if admin user exists
+    var adminUser = await userManager.FindByEmailAsync(adminEmail);
+    if (adminUser == null)
+    {
+        var admin = new ApplicationUser
+        {
+            UserName = "admin@gmail.com",
+            Email = "admin@gmail.com",
+            Name = "Admin"
+        };
+        var result = await userManager.CreateAsync(admin, "Admin@123");// Create admin user with password
+        // If creation succeeded, add to Admin role
+        if (result.Succeeded)
+        {
+            await userManager.AddToRoleAsync(admin, "Admin");
+        }
+    }
 }
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseDeveloperExceptionPage();
+
+    // Middlewares
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseDeveloperExceptionPage();
+    }
+
+    app.UseRouting();// Use routing middleware
+    app.UseAuthentication();// Use authentication middleware
+    app.UseCors(policy =>
+        policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());// Enable CORS for all origins, methods, and headers
+
+    app.UseAuthorization();// Use authorization middleware
+    app.MapControllers();// Map controllers
+    await app.RunAsync();// Run the application
 }
-
-app.UseRouting();
-app.UseAuthentication();
-app.UseCors(policy =>
-    policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
-
-app.UseAuthorization();
-app.MapControllers();
-app.Run();

@@ -1,4 +1,3 @@
-// ✅ AddTaskPage.tsx (with validation)
 "use client";
 
 import { useState } from "react";
@@ -8,6 +7,20 @@ import { useRouter } from "next/navigation";
 import { getUserIdFromToken } from "../utils/getUserIdFromToken";
 import SideMenu from "../components/SideMenu";
 
+/**
+ * Renders the AddTaskPage component, which provides a form for users to add new tasks.
+ * 
+ * Features:
+ * - Allows users to input a task title, select a category, set a due date and time, and assign a priority.
+ * - Validates required fields and ensures the due date/time is not in the past.
+ * - Displays success or error messages based on the result of the task creation.
+ * - Requires user authentication; extracts user ID from a JWT token.
+ * - On successful task addition, redirects the user to the home page after a short delay.
+ * - Uses a protected route wrapper and includes a side menu for navigation.
+ * 
+ * @component
+ * @returns {JSX.Element} The rendered AddTaskPage component.
+ */
 export default function AddTaskPage() {
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("");
@@ -59,8 +72,7 @@ export default function AddTaskPage() {
       category,
       dueDate: dueDate && dueTime ? `${dueDate}T${dueTime}:00` : undefined,
       priority: priority > 0 ? priority : undefined,
-      isCompleted: false,
-      userId
+      isCompleted: false
     };
 
     try {
@@ -150,4 +162,3 @@ export default function AddTaskPage() {
   );
 }
 
-// ✅ Let me know when you're ready for the updated EditTaskPage code.

@@ -4,14 +4,9 @@ using Microsoft.AspNetCore.Identity;
 /// Represents an application user with additional custom properties.
 /// Inherits from <see cref="IdentityUser"/>.
 /// </summary>
-/*public class ApplicationUser : IdentityUser
-{
-    /// <summary>
-    /// Gets or sets the name of the user.
-    /// This is an optional custom field.
-    /// </summary>
-    public string? Name { get; set; }
-}*/
+/// Gets or sets the name of the user.
+/// This is an optional custom field.
+
 namespace TodoApi.Models
 {
     public class ApplicationUser : IdentityUser

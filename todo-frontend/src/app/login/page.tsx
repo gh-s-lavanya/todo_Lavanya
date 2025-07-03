@@ -26,8 +26,8 @@ export default function LoginPage() {
   const router = useRouter();
 
   const handleLogin = async () => {
-    try {                          // change the url to http://192.168.x.x:5000/api/account/login if you are on a mobile device.
-      const res = await axios.post("/account/login", {
+    try {                          
+      const res = await axios.post("http://localhost:5000/api/account/login", {
         email,
         password,
       });

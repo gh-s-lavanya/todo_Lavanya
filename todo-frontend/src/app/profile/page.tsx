@@ -50,10 +50,10 @@ export default function ProfilePage() {
     const fetchData = async () => {
       try {
         const [userRes, todosRes] = await Promise.all([ // change the url to http://192.168.x.x:5000/api/account/me if you are on a mobile device.
-          axios.get("/account/me", {
+          axios.get("http://localhost:5000/api/account/me", {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          axios.get("/todo", {
+          axios.get("http://localhost:5000/api/todo", {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
@@ -78,7 +78,7 @@ export default function ProfilePage() {
       const token = getToken();
 
       await axios.put(
-        "/account/me",
+        "http://localhost:5000/api/account/me",
         {
           name,
           phoneNumber,

@@ -1,25 +1,47 @@
-// components/SideMenu.tsx
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 /**
- * SideMenu component renders a responsive sidebar menu for navigation.
- *
- * Features:
- * - Hamburger button toggles the visibility of the side menu.
- * - Menu options for Home, Add Task, My Profile, and Logout.
- * - Logout clears local and session storage, then redirects to the login page.
- * - Clicking outside the menu closes it.
- *
- * Uses Next.js router for navigation and React state for menu visibility.
- *
+ * SideMenu component renders a responsive sidebar menu with role-based options.
+ */
+/**
+ * SideMenu component renders a responsive sidebar menu with navigation options.
+ * 
+ * - Displays a hamburger button to toggle the menu.
+ * - Decodes a JWT from localStorage to determine the user's role.
+ * - Shows navigation buttons for Home, Add Task, and My Profile.
+ * - If the user has the "Admin" role, displays additional admin panel options:
+ *   - View Users
+ *   - Assign Tasks
+ *   - Promote Users
+ * - Provides a Logout button that clears local and session storage and redirects to the login page.
+ * 
  * @component
+ * @returns {JSX.Element} The rendered sidebar menu component.
  */
 export default function SideMenu() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [role, setRole] = useState<string | null>(null);
   const router = useRouter();
+
+  // Decode JWT and extract role
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      try {
+        const decoded = JSON.parse(atob(token.split(".")[1]));
+        const roleClaim =
+          decoded[
+            "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
+          ];
+        setRole(Array.isArray(roleClaim) ? roleClaim[0] : roleClaim);
+      } catch (err) {
+        console.error("Error decoding token:", err);
+      }
+    }
+  }, []);
 
   const handleLogout = () => {
     localStorage.clear();
@@ -37,7 +59,7 @@ export default function SideMenu() {
         ☰
       </button>
 
-      {menuOpen && (     
+      {menuOpen && (
         <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 flex">
           <div className="bg-pink-100/80 backdrop-blur-md text-black w-64 p-6 shadow-xl rounded-r-2xl">
             <h2 className="text-xl font-bold mb-4">Menu</h2>
@@ -62,6 +84,36 @@ export default function SideMenu() {
             >
               My Profile
             </button>
+
+            {/* ✅ Admin-only buttons */}
+            {role === "Admin" && (
+              <>
+                <div className="mt-6 mb-2 text-sm font-semibold text-gray-700">
+                  Admin Panel
+                </div>
+
+                <button
+                  onClick={() => router.push("/admin/users")}
+                  className="w-full bg-yellow-500 text-white py-2 mb-3 rounded"
+                >
+                  View Users
+                </button>
+
+                <button
+                  onClick={() => router.push("/admin/assign")}
+                  className="w-full bg-yellow-500 text-white py-2 mb-3 rounded"
+                >
+                  Assign Tasks
+                </button>
+
+                <button
+                  onClick={() => router.push("/admin/promote")}
+                  className="w-full bg-yellow-500 text-white py-2 mb-3 rounded"
+                >
+                  Promote Users
+                </button>
+              </>
+            )}
 
             <button
               onClick={handleLogout}

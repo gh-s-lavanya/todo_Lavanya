@@ -1,3 +1,21 @@
+/**
+ * The main Home page component for the Todo application.
+ * 
+ * This component displays the user's tasks, allows filtering, sorting, and reordering via drag-and-drop.
+ * It also provides a sidebar menu for navigation, filtering, and user actions such as logout and profile access.
+ * 
+ * Features:
+ * - Fetches and displays todos for the authenticated user.
+ * - Supports filtering by completion status, due date, priority, and category.
+ * - Allows drag-and-drop reordering of tasks, with server-side persistence.
+ * - Provides quick actions: add, edit, delete, and toggle completion of tasks.
+ * - Shows today's progress statistics.
+ * - Handles authentication and redirects based on user role (Admin/User).
+ * - Responsive sidebar menu for navigation and actions.
+ * 
+ * @component
+ * @returns {JSX.Element} The rendered Home page with todo list and controls.
+ */
 "use client";
 
 import { useEffect, useState, useRef } from "react";
@@ -7,24 +25,7 @@ import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea
 import ProtectedRoute from "./components/ProtectedRoute";
 import { getToken} from "./utils/auth";
 import { getUserIdFromToken } from "./utils/getUserIdFromToken";
-
-/**
- * Home component for the Todo application.
- * 
- * This component displays the main dashboard for the user's tasks, including:
- * - Authentication check and redirect to login if not authenticated.
- * - Fetching and displaying todos from the backend API.
- * - Filtering todos by completion status, due date, priority, and category.
- * - Drag-and-drop reordering of todos with position updates sent to the backend.
- * - Marking todos as complete/incomplete.
- * - Deleting individual todos or all completed todos.
- * - Progress statistics for today's tasks.
- * - Responsive side menu for navigation and filtering.
- * - Handles logout and cross-tab logout synchronization.
- * 
- * @component
- * @returns {JSX.Element} The rendered Home page with todo list and controls.
- */
+import { getUserRoleFromToken } from "./utils/getUserRoleFromToken";
 
 interface TodoItem {
   id: number;
@@ -34,6 +35,7 @@ interface TodoItem {
   userId: string;
   dueDate?: string;
   priority?: number;
+  assignedBy?: string;
 }
 
 type FilterOption = "All" | "Completed" | "Uncompleted" | "DueDate" | "Priority";
@@ -49,18 +51,26 @@ export default function Home() {
   const filterRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const [authLoading, setAuthLoading] = useState(true);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
-  useEffect(() => {
-    const token = getToken();
-    const userId = token ? getUserIdFromToken(token) : null;
+useEffect(() => {
+  const token = getToken();
+  const userId = token ? getUserIdFromToken(token) : null;
+  const role = token ? getUserRoleFromToken(token) : null; // 🆕
 
-    if (!token || !userId) {
-      router.push("/login");
+  if (!token || !userId) {
+    router.push("/login");
+  } else {
+    const role = getUserRoleFromToken(token);
+    setUserRole(role);
+    if (role === "Admin") {
+      router.push("/admin");
     } else {
       setAuthLoading(false);
     }
-  }, []);
-
+  }
+}, []);
+  
   useEffect(() => {
   const syncLogout = () => {
     if (!localStorage.getItem("accessToken")) {
@@ -136,12 +146,9 @@ export default function Home() {
 
   const toggleComplete = async (todo: TodoItem) => {
     try {
-      await axios.put(`/todo/${todo.id}`, {
-        ...todo,
-        isCompleted: !todo.isCompleted
-      });
-      fetchTodos();
-    } catch (err) {
+    await axios.patch(`/todo/${todo.id}/toggle`);
+    fetchTodos();
+  } catch (err) {
   
     console.error(err);
     }
@@ -190,10 +197,13 @@ export default function Home() {
     filteredTodos.sort((a, b) => (a.priority || 0) - (b.priority || 0));
   }
 
-  const completedToday = todos.filter(t => t.isCompleted && t.dueDate?.startsWith(new Date().toISOString().split("T")[0])).length;
-  const totalToday = todos.filter(t => t.dueDate?.startsWith(new Date().toISOString().split("T")[0])).length;
-  const progressPercent = totalToday > 0 ? Math.round((completedToday / totalToday) * 100) : 0;
-
+  const completedCount = filteredTodos.filter(t => t.isCompleted === true).length;
+  const uncompletedCount = filteredTodos.length - completedCount;
+  const progressPercent =
+  filteredTodos.length > 0
+    ? Math.round((completedCount / filteredTodos.length) * 100)
+    : 0;
+    
 
   if (authLoading) {
   return <p>Loading...</p>;
@@ -294,20 +304,11 @@ export default function Home() {
           {/* Progress Stats */}
           <div className="p-4 bg-pink-200 rounded-xl shadow-inner mb-6">
             {(() => {
-              const today = new Date().toISOString().split("T")[0];
-              const todaysTasks = todos.filter((t) =>
-                t.dueDate?.startsWith(today)
-              );
-              const completedCount = todaysTasks.filter((t) => t.isCompleted).length;
-              const progressPercent =
-                todaysTasks.length > 0
-                  ? Math.round((completedCount / todaysTasks.length) * 100)
-                  : 0;
 
               return (
                 <>
                   <strong>Completed</strong>: {completedCount} <br />
-                  <strong>Uncompleted</strong>: {todaysTasks.length - completedCount}
+                  <strong>Uncompleted</strong>: {uncompletedCount} <br />
                   <div className="w-full bg-white mt-2 rounded-full h-4">
                     <div
                       className="bg-green-500 h-4 rounded-full"
@@ -332,60 +333,70 @@ export default function Home() {
             <div {...provided.droppableProps} ref={provided.innerRef}>
               {filteredTodos.map((todo, index) => (
                 <Draggable
-                  key={todo.id}
-                  draggableId={todo.id.toString()}
-                  index={index}
+                key={todo.id}
+                draggableId={todo.id.toString()}
+                index={index}
                 >
                   {(provided) => (
                     <div
-                      ref={provided.innerRef}
-                      {...provided.draggableProps}
-                      {...provided.dragHandleProps}
-                      className="bg-white p-4 rounded-xl shadow-md hover:shadow-xl mb-4"
+                    ref={provided.innerRef}
+                    {...provided.draggableProps}
+                    {...provided.dragHandleProps}
+                    className="bg-white p-4 rounded-xl shadow-md hover:shadow-xl mb-4 relative"
                     >
-                      <div className="flex flex-col gap-2">
-                        <div className="flex items-center gap-3">
+                      {/* Action buttons */}
+                      <div className="absolute top-3 right-3 flex gap-2">
+                        {(!todo.assignedBy || userRole === "Admin") ? (
+                          <>
+                          <button
+                          onClick={() => startEdit(todo)}
+                          title="Edit"
+                          className="text-yellow-500 hover:text-yellow-700 bg-yellow-100 p-1 rounded-full"
+                          >
+                            ✏️
+                            </button>
+                            <button
+                            onClick={() => deleteTodo(todo.id)}
+                            title="Delete"
+                            className="text-red-500 hover:text-red-700 bg-red-100 p-1 rounded-full"
+                            >
+                              🗑️
+                            </button>
+                            </>
+                            ) : (
+                            <span
+                            title="Assigned by admin – cannot modify"
+                            className="text-xs text-gray-500 italic"
+                            >
+                              🔒
+                            </span>
+                        )}
+                        </div>
+                        {/* Checkbox & Task Content */}
+                        <div className="flex items-start gap-3">
                           <input
-                            type="checkbox"
-                            checked={todo.isCompleted}
-                            onChange={() => toggleComplete(todo)}
-                            className="w-4 h-4"
+                          type="checkbox"
+                          checked={todo.isCompleted}
+                          onChange={() => toggleComplete(todo)}
+                          disabled={false}
+                          className="mt-1 w-4 h-4 accent-purple-500"
                           />
-                          <div>
-                            <h3 className="font-semibold text-lg">{todo.title}</h3>
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-lg text-purple-700">{todo.title}</h3>
                             {todo.category && (
-                              <p className="text-sm text-gray-600">{todo.category}</p>
+                              <p className="text-sm text-gray-600">📂 {todo.category}</p>
                             )}
                             {todo.dueDate && (
-                              <p className="text-sm text-gray-500">
-                                Due: {todo.dueDate}
-                              </p>
+                              <p className="text-sm text-gray-500">📅 Due: {todo.dueDate}</p>
                             )}
                             {todo.priority && (
-                              <p className="text-sm text-gray-500">
-                                Priority: {todo.priority}
-                              </p>
+                              <p className="text-sm text-gray-500">⭐ Priority: {todo.priority}</p>
                             )}
                           </div>
                         </div>
-                        <div className="flex gap-3">
-                          <button
-                            onClick={() => startEdit(todo)}
-                            className="text-yellow-600 hover:text-yellow-800"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => deleteTodo(todo.id)}
-                            className="text-red-600 hover:text-red-800"
-                          >
-                            Delete
-                          </button>
-                        </div>
                       </div>
-                    </div>
-                  )}
-                </Draggable>
+                    )}
+                  </Draggable>
               ))}
               {provided.placeholder}
             </div>
